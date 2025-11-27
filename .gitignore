@@ -1,0 +1,17 @@
+# Environment files
+.env
+.env.*
+
+# JSON artifacts
+*.json
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
