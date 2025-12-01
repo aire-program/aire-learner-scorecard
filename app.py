@@ -1,33 +1,28 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List
+from typing import List, Dict
 
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 
+from src.schema import REQUIRED_COLUMNS, ColumnNames
+
 # Define path to data
 DATA_PATH = Path(__file__).parent / "data" / "aire_telemetry_synthetic.csv"
-
-# Required columns for validation
-REQUIRED_COLUMNS = [
-    "timestamp_utc",
-    "learner_id",
-    "resource_id",
-    "evaluation_score",
-    "clarity_score",
-    "context_score",
-    "constraints_score",
-    "primary_weakness",
-    "recommended_resource_id",
-    "user_prompt_character_count",
-]
 
 
 @st.cache_data
 def load_data(path: Path = DATA_PATH) -> pd.DataFrame:
-    """Load and validate telemetry data."""
+    """Load and validate telemetry data.
+
+    Args:
+        path: Path to the CSV file.
+
+    Returns:
+        pd.DataFrame: Loaded and validated dataframe.
+    """
     if not path.exists():
         st.error(f"Data file not found at {path}. Please run `python3 scripts/generate_synthetic_telemetry.py`.")
         st.stop()
@@ -46,7 +41,7 @@ def load_data(path: Path = DATA_PATH) -> pd.DataFrame:
 
     # Parse dates
     try:
-        df["timestamp_utc"] = pd.to_datetime(df["timestamp_utc"])
+        df[ColumnNames.TIMESTAMP_UTC.value] = pd.to_datetime(df[ColumnNames.TIMESTAMP_UTC.value])
     except Exception as e:
         st.error(f"Failed to parse timestamps: {e}")
         st.stop()
@@ -54,30 +49,44 @@ def load_data(path: Path = DATA_PATH) -> pd.DataFrame:
     return df
 
 
-def learner_summary(df: pd.DataFrame) -> dict[str, float]:
-    """Calculate summary metrics for a learner."""
+def learner_summary(df: pd.DataFrame) -> Dict[str, float]:
+    """Calculate summary metrics for a learner.
+
+    Args:
+        df: Dataframe containing learner events.
+
+    Returns:
+        Dict[str, float]: Summary metrics.
+    """
     return {
         "events": len(df),
-        "resources": df["resource_id"].nunique(),
-        "avg_score": df["evaluation_score"].mean(),
-        "total_chars": df["user_prompt_character_count"].sum(),
+        "resources": df[ColumnNames.RESOURCE_ID.value].nunique(),
+        "avg_score": df[ColumnNames.EVALUATION_SCORE.value].mean(),
+        "total_chars": df[ColumnNames.USER_PROMPT_CHARACTER_COUNT.value].sum(),
     }
 
 
 def get_recommendations(df: pd.DataFrame) -> List[str]:
-    """Generate recommendations based on primary weaknesses."""
+    """Generate recommendations based on primary weaknesses.
+
+    Args:
+        df: Dataframe containing learner events.
+
+    Returns:
+        List[str]: List of recommendation strings.
+    """
     if df.empty:
         return ["No data available for recommendations."]
 
     # Find most frequent weakness
-    weakness_counts = df["primary_weakness"].value_counts()
+    weakness_counts = df[ColumnNames.PRIMARY_WEAKNESS.value].value_counts()
     if weakness_counts.empty:
         return ["Keep practicing!"]
 
     top_weakness = weakness_counts.idxmax()
     
     # Get the recommended resource for this weakness (take the most common mapping in case of variance)
-    rec_resource = df[df["primary_weakness"] == top_weakness]["recommended_resource_id"].mode()
+    rec_resource = df[df[ColumnNames.PRIMARY_WEAKNESS.value] == top_weakness][ColumnNames.RECOMMENDED_RESOURCE_ID.value].mode()
     rec_id = rec_resource[0] if not rec_resource.empty else "general-review"
 
     return [
@@ -88,15 +97,22 @@ def get_recommendations(df: pd.DataFrame) -> List[str]:
 
 
 def score_trend_chart(df: pd.DataFrame):
-    """Plot evaluation score over time."""
-    df = df.sort_values("timestamp_utc")
+    """Plot evaluation score over time.
+
+    Args:
+        df: Dataframe containing learner events.
+
+    Returns:
+        plotly.graph_objects.Figure: Line chart of scores.
+    """
+    df = df.sort_values(ColumnNames.TIMESTAMP_UTC.value)
     fig = px.line(
         df,
-        x="timestamp_utc",
-        y="evaluation_score",
+        x=ColumnNames.TIMESTAMP_UTC.value,
+        y=ColumnNames.EVALUATION_SCORE.value,
         markers=True,
         title="Evaluation Score Trend",
-        labels={"evaluation_score": "Score (1-5)", "timestamp_utc": "Date"},
+        labels={ColumnNames.EVALUATION_SCORE.value: "Score (1-5)", ColumnNames.TIMESTAMP_UTC.value: "Date"},
         range_y=[0, 5.5]
     )
     fig.update_layout(margin=dict(l=0, r=0, t=40, b=0))
@@ -104,15 +120,22 @@ def score_trend_chart(df: pd.DataFrame):
 
 
 def resource_usage_chart(df: pd.DataFrame):
-    """Plot usage by resource ID."""
-    counts = df["resource_id"].value_counts().reset_index()
-    counts.columns = ["resource_id", "events"]
+    """Plot usage by resource ID.
+
+    Args:
+        df: Dataframe containing learner events.
+
+    Returns:
+        plotly.graph_objects.Figure: Bar chart of resource usage.
+    """
+    counts = df[ColumnNames.RESOURCE_ID.value].value_counts().reset_index()
+    counts.columns = [ColumnNames.RESOURCE_ID.value, "events"]
     fig = px.bar(
         counts, 
-        x="resource_id", 
+        x=ColumnNames.RESOURCE_ID.value, 
         y="events", 
         title="Resource Engagement",
-        labels={"resource_id": "Resource ID", "events": "Interactions"}
+        labels={ColumnNames.RESOURCE_ID.value: "Resource ID", "events": "Interactions"}
     )
     fig.update_layout(margin=dict(l=0, r=0, t=40, b=0))
     return fig
@@ -126,13 +149,13 @@ def main():
     
     # Sidebar
     st.sidebar.header("Learner Profile")
-    learners = sorted(df["learner_id"].unique())
+    learners = sorted(df[ColumnNames.LEARNER_ID.value].unique())
     if not learners:
         st.warning("No learners found in dataset.")
         return
 
     selected_learner = st.sidebar.selectbox("Select Learner ID", learners)
-    learner_df = df[df["learner_id"] == selected_learner]
+    learner_df = df[df[ColumnNames.LEARNER_ID.value] == selected_learner]
     
     summary = learner_summary(learner_df)
 
@@ -163,10 +186,10 @@ def main():
     with st.expander("View Raw Telemetry"):
         st.dataframe(
             learner_df[[
-                "timestamp_utc", "resource_id", "evaluation_score", 
-                "clarity_score", "context_score", "constraints_score", 
-                "primary_weakness"
-            ]].sort_values("timestamp_utc", ascending=False)
+                ColumnNames.TIMESTAMP_UTC.value, ColumnNames.RESOURCE_ID.value, ColumnNames.EVALUATION_SCORE.value, 
+                ColumnNames.CLARITY_SCORE.value, ColumnNames.CONTEXT_SCORE.value, ColumnNames.CONSTRAINTS_SCORE.value, 
+                ColumnNames.PRIMARY_WEAKNESS.value
+            ]].sort_values(ColumnNames.TIMESTAMP_UTC.value, ascending=False)
         )
 
 

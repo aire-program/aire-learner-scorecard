@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import random
-import uuid
+import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pandas as pd
+
+# Add project root to path to allow importing src
+sys.path.append(str(Path(__file__).parent.parent))
+
+from src.schema import ColumnNames, ResourceIDs, Weakness, WEAKNESS_MAP
 
 
 def random_timestamp(start: datetime, days: int) -> datetime:
@@ -15,15 +20,7 @@ def random_timestamp(start: datetime, days: int) -> datetime:
 
 def build_event(learner_id: str, start: datetime) -> dict[str, object]:
     # AIRE Standard Schema Fields
-    resource_id = random.choice(
-        [
-            "micro-tutor-01",  # Orientation
-            "micro-tutor-02",  # Data Ethics
-            "micro-tutor-03",  # Prompt Engineering
-            "micro-tutor-04",  # RAG
-            "micro-tutor-05",  # Evaluation
-        ]
-    )
+    resource_id = random.choice([r.value for r in ResourceIDs])
     
     # Generate scores (1-5 scale)
     clarity_score = random.randint(1, 5)
@@ -35,36 +32,31 @@ def build_event(learner_id: str, start: datetime) -> dict[str, object]:
     
     # Determine primary weakness based on lowest score
     scores = {
-        "Clarity": clarity_score,
-        "Context": context_score,
-        "Constraints": constraints_score
+        Weakness.CLARITY.value: clarity_score,
+        Weakness.CONTEXT.value: context_score,
+        Weakness.CONSTRAINTS.value: constraints_score
     }
     primary_weakness = min(scores, key=scores.get)
     
     # Map weakness to recommended resource
-    weakness_map = {
-        "Clarity": "tutorial-clarity-basics",
-        "Context": "tutorial-grounding-techniques",
-        "Constraints": "tutorial-prompt-constraints"
-    }
-    recommended_resource_id = weakness_map[primary_weakness]
+    recommended_resource_id = WEAKNESS_MAP[primary_weakness]
     
     # Other fields
     user_prompt_character_count = random.randint(50, 1500)
     timestamp = random_timestamp(start, days=60).replace(tzinfo=timezone.utc)
     
     return {
-        "timestamp_utc": timestamp.isoformat(),
-        "learner_id": learner_id,
-        "learner_role": "learner",  # Static for this dataset
-        "resource_id": resource_id,
-        "user_prompt_character_count": user_prompt_character_count,
-        "clarity_score": clarity_score,
-        "context_score": context_score,
-        "constraints_score": constraints_score,
-        "evaluation_score": evaluation_score,
-        "primary_weakness": primary_weakness,
-        "recommended_resource_id": recommended_resource_id,
+        ColumnNames.TIMESTAMP_UTC.value: timestamp.isoformat(),
+        ColumnNames.LEARNER_ID.value: learner_id,
+        ColumnNames.LEARNER_ROLE.value: "learner",  # Static for this dataset
+        ColumnNames.RESOURCE_ID.value: resource_id,
+        ColumnNames.USER_PROMPT_CHARACTER_COUNT.value: user_prompt_character_count,
+        ColumnNames.CLARITY_SCORE.value: clarity_score,
+        ColumnNames.CONTEXT_SCORE.value: context_score,
+        ColumnNames.CONSTRAINTS_SCORE.value: constraints_score,
+        ColumnNames.EVALUATION_SCORE.value: evaluation_score,
+        ColumnNames.PRIMARY_WEAKNESS.value: primary_weakness,
+        ColumnNames.RECOMMENDED_RESOURCE_ID.value: recommended_resource_id,
     }
 
 
@@ -78,7 +70,7 @@ def generate_events(num_learners: int = 50) -> pd.DataFrame:
         for _ in range(events_for_learner):
             rows.append(build_event(learner_id, start))
     frame = pd.DataFrame(rows)
-    frame.sort_values("timestamp_utc", inplace=True)
+    frame.sort_values(ColumnNames.TIMESTAMP_UTC.value, inplace=True)
     frame.reset_index(drop=True, inplace=True)
     return frame
 
