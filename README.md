@@ -94,3 +94,22 @@ Contributions that improve clarity, extend example data, or add new analytic vie
 - redesign views to align with specific reporting needs  
 
 Before using real learner data, implementers should ensure alignment with institutional policies, ethics review processes, and data governance requirements.
+
+## Development
+
+### Project Structure
+- `app.py`: Main Streamlit application.
+- `src/`: Shared logic and schema definitions.
+- `scripts/`: Data generation scripts.
+- `tests/`: Unit tests.
+- `data/`: Directory for generated data.
+
+### Running Tests
+This project uses `pytest` for testing. To run the test suite:
+
+```bash
+pytest tests/
+```
+
+### Code Style
+The project follows standard Python coding conventions. Type hints are used throughout the codebase to ensure clarity and maintainability.
