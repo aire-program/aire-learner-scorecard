@@ -10,6 +10,8 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from src.schema import REQUIRED_COLUMNS, ColumnNames
+from src.charts import PALETTE, COLORWAY, apply_layout_defaults
+from src.assets import get_global_styles, render_header, render_sidebar_branding, LUCIDE_ICONS
 
 # Define path to data
 DATA_PATH = Path(__file__).parent / "data" / "aire_telemetry_synthetic.csv"
@@ -89,15 +91,15 @@ def score_trend_chart(df: pd.DataFrame) -> go.Figure:
         x=ColumnNames.TIMESTAMP_UTC.value,
         y=ColumnNames.EVALUATION_SCORE.value,
         markers=True,
-        title="Evaluation Score Trend",
         labels={
             ColumnNames.EVALUATION_SCORE.value: "Score (1-5)",
             ColumnNames.TIMESTAMP_UTC.value: "Date",
         },
         range_y=[0, 5.5],
+        color_discrete_sequence=[PALETTE["primary"]],
     )
-    fig.update_layout(margin={"l": 0, "r": 0, "t": 40, "b": 0})
-    return fig
+    fig.update_traces(hovertemplate="%{x|%b %d}: %{y:.2f}")
+    return apply_layout_defaults(fig, "Figure 1: Evaluation Score Trend")
 
 
 def resource_usage_chart(df: pd.DataFrame) -> go.Figure:
@@ -112,11 +114,11 @@ def resource_usage_chart(df: pd.DataFrame) -> go.Figure:
         counts,
         x=ColumnNames.RESOURCE_ID.value,
         y="events",
-        title="Resource Engagement",
         labels={ColumnNames.RESOURCE_ID.value: "Resource ID", "events": "Interactions"},
+        color_discrete_sequence=[PALETTE["primary"]],
     )
-    fig.update_layout(margin={"l": 0, "r": 0, "t": 40, "b": 0})
-    return fig
+    fig.update_traces(hovertemplate="%{x}: %{y} interactions", marker_line_color="#ffffff", marker_line_width=0.5)
+    return apply_layout_defaults(fig, "Figure 2: Resource Engagement")
 
 
 def prompt_length_scatter(df: pd.DataFrame) -> go.Figure:
@@ -129,10 +131,10 @@ def prompt_length_scatter(df: pd.DataFrame) -> go.Figure:
             ColumnNames.USER_PROMPT_CHARACTER_COUNT.value: "Prompt length (characters)",
             ColumnNames.EVALUATION_SCORE.value: "Score (1-5)",
         },
-        title="Find Your Right-Sized Prompts",
+        color_discrete_sequence=[PALETTE["primary"]],
     )
-    fig.update_layout(margin={"l": 0, "r": 0, "t": 60, "b": 0})
-    return fig
+    fig.update_traces(hovertemplate="Length: %{x}<br>Score: %{y:.2f}")
+    return apply_layout_defaults(fig, "Figure 5: Prompt Length vs. Performance")
 
 
 def practice_variety_chart(df: pd.DataFrame) -> go.Figure:
@@ -150,10 +152,10 @@ def best_time_chart(df: pd.DataFrame) -> go.Figure:
         x="hour",
         y=ColumnNames.EVALUATION_SCORE.value,
         labels={"hour": "Hour of day", ColumnNames.EVALUATION_SCORE.value: "Avg score"},
-        title="When You Usually Do Your Best (local hour)",
+        color_discrete_sequence=[PALETTE["accent"]],
     )
-    fig.update_layout(margin={"l": 0, "r": 0, "t": 60, "b": 0})
-    return fig
+    fig.update_traces(hovertemplate="Hour %{x}: %{y:.2f} avg", marker_line_color="#ffffff", marker_line_width=0.5)
+    return apply_layout_defaults(fig, "Figure 7: Optimal Practice Times")
 
 
 def aggregate_score_trend_chart(df: pd.DataFrame) -> go.Figure:
@@ -169,12 +171,12 @@ def aggregate_score_trend_chart(df: pd.DataFrame) -> go.Figure:
         x="date",
         y=ColumnNames.EVALUATION_SCORE.value,
         markers=True,
-        title="Average Evaluation Score (All Learners)",
         labels={"date": "Date", ColumnNames.EVALUATION_SCORE.value: "Avg Score (1-5)"},
         range_y=[0, 5.5],
+        color_discrete_sequence=[PALETTE["primary"]],
     )
-    fig.update_layout(margin={"l": 0, "r": 0, "t": 40, "b": 0})
-    return fig
+    fig.update_traces(hovertemplate="%{x|%b %d}: %{y:.2f} avg")
+    return apply_layout_defaults(fig, "Figure: Average Evaluation Score (All Learners)")
 
 
 def weakness_distribution_chart(df: pd.DataFrame) -> go.Figure:
@@ -189,17 +191,19 @@ def weakness_distribution_chart(df: pd.DataFrame) -> go.Figure:
         counts,
         x=ColumnNames.PRIMARY_WEAKNESS.value,
         y="events",
-        title="Primary Weakness Distribution",
         labels={ColumnNames.PRIMARY_WEAKNESS.value: "Weakness", "events": "Count"},
+        color_discrete_sequence=[PALETTE["warning"]],
     )
-    fig.update_layout(margin={"l": 0, "r": 0, "t": 40, "b": 0})
-    return fig
+    fig.update_traces(hovertemplate="%{x}: %{y}", marker_line_color="#ffffff", marker_line_width=0.5)
+    return apply_layout_defaults(fig, "Figure: Primary Weakness Distribution")
 
 
 def weakness_decay_chart(df: pd.DataFrame) -> go.Figure:
     """Rolling share of weaknesses over last 30 days."""
     if df.empty:
-        return go.Figure()
+        fig = go.Figure()
+        fig.add_annotation(text="No weakness data available.", showarrow=False)
+        return apply_layout_defaults(fig, "Figure 3: Weakness Trend Over Time")
     frame = df.copy()
     frame["date"] = frame[ColumnNames.TIMESTAMP_UTC.value].dt.date
     daily = (
@@ -211,11 +215,11 @@ def weakness_decay_chart(df: pd.DataFrame) -> go.Figure:
     pivot = pivot.rolling(window=7, min_periods=1).mean()
     fig = px.area(
         pivot,
-        title="Are Your Common Issues Fading?",
         labels={"value": "Avg issues (7-day)", "date": "Date"},
+        color_discrete_sequence=COLORWAY,
     )
-    fig.update_layout(margin={"l": 0, "r": 0, "t": 60, "b": 0}, legend_title_text="Weakness")
-    return fig
+    fig.update_layout(legend_title_text="Weakness")
+    return apply_layout_defaults(fig, "Figure 3: Are Your Common Issues Fading?")
 
 
 def micro_skill_heatmap(df: pd.DataFrame) -> go.Figure:
@@ -233,11 +237,10 @@ def micro_skill_heatmap(df: pd.DataFrame) -> go.Figure:
         subset.T,
         aspect="auto",
         labels={"x": "Session #", "color": "Score (1-5)"},
-        title="Which Rubric Parts Need Attention",
+        color_continuous_scale=[[0, PALETTE["soft"]], [0.5, PALETTE["accent"]], [1, PALETTE["primary_dark"]]],
     )
     fig.update_yaxes(ticktext=["Clarity", "Context", "Constraints", "Overall"], tickvals=list(range(4)))
-    fig.update_layout(margin={"l": 0, "r": 0, "t": 60, "b": 0})
-    return fig
+    return apply_layout_defaults(fig, "Figure 4: Rubric Dimension Analysis")
 
 
 def surprise_dips(df: pd.DataFrame) -> pd.DataFrame:
@@ -344,43 +347,18 @@ def aggregate_summary(df: pd.DataFrame) -> dict[str, float]:
 
 def main() -> None:
     st.set_page_config(page_title="AIRE Learner Scorecard", layout="wide")
-    # tighten sidebar top padding
-    st.markdown(
-        """
-        <style>
-        section[data-testid="stSidebar"] {
-            padding-top: 0 !important;
-        }
-        section[data-testid="stSidebar"] > div:first-child {
-            padding-top: 4px !important;
-            margin-top: 0 !important;
-        }
-        section[data-testid="stSidebar"] .block-container {
-            padding-top: 0 !important;
-            margin-top: 0 !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.title("AIRE Learner Scorecard")
+    
+    # Inject global styles matching AIRE Impact Dashboard
+    st.markdown(get_global_styles(), unsafe_allow_html=True)
+    
+    # Render AIRE header banner
+    st.markdown(render_header(), unsafe_allow_html=True)
 
     df = load_data()
 
     # Sidebar branding
-    st.sidebar.markdown(
-        """
-        <div style="padding-top:8px; font-family: 'Inter', sans-serif;">
-            <div style="font-size: 26px; font-weight: 700; line-height: 1.1; margin-bottom: 2px;">
-                AIRE
-            </div>
-            <div style="font-size: 13px; font-weight: 500; line-height: 1.2; margin-bottom: 12px;">
-                Applied AI Innovation and Research Enablement
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.sidebar.markdown(render_sidebar_branding(), unsafe_allow_html=True)
+    st.sidebar.caption("Note: Data shown is synthetically generated for demonstration purposes.")
 
     # Determine learner scope
     learners = sorted(df[ColumnNames.LEARNER_ID.value].unique())
@@ -442,7 +420,7 @@ def main() -> None:
     # Quick View tab (landing)
     with tabs[0]:
         st.subheader("Quick View")
-        st.caption("A fast snapshot of how you're doing today.")
+        st.write("A fast snapshot of your current progress and performance. Use this view to quickly assess momentum and identify immediate next steps for improvement.")
         overview_col1, overview_col2 = st.columns([2, 1])
         with overview_col1:
             st.markdown("**Score trend** – how your scores have moved. Steady ups mean your new habits are sticking.")
@@ -455,7 +433,7 @@ def main() -> None:
     # Performance & Stability tab
     with tabs[1]:
         st.subheader("Performance & Stability")
-        st.caption("See how steady your scores are and how fast you recover after a low score.")
+        st.write("Monitor consistency of your scores and track recovery patterns after challenging sessions. Steady performance indicates skill consolidation; quick bounce-backs demonstrate resilience.")
 
         c1, c2, c3 = st.columns(3)
         c1.metric("Steady progress", f"{consistency_score(learner_df):.2f} std dev")
@@ -470,20 +448,20 @@ def main() -> None:
     # Skill Weakness & Progress tab
     with tabs[2]:
         st.subheader("Skill Weakness & Progress")
-        st.caption("Spot which skills are improving and which still need attention.")
+        st.write("Identify which skills are improving and which still need attention. Track how your common challenges evolve over time to focus your practice on high-impact areas.")
         st.plotly_chart(weakness_decay_chart(learner_df), use_container_width=True, key="weakness_decay")
         st.plotly_chart(micro_skill_heatmap(learner_df), use_container_width=True, key="micro_skill")
         dips = surprise_dips(learner_df)
         with st.expander("Surprise dips (sessions to review)"):
             if dips.empty:
-                st.write("No big drops found—keep it up!")
+                st.write("No significant drops found—keep it up!")
             else:
                 st.dataframe(dips)
 
     # Action → Outcome tab
     with tabs[3]:
         st.subheader("Action → Outcome")
-        st.caption("See what happened after you followed tips or used resources.")
+        st.write("Analyze the impact of resources and recommendations on your performance. Understand which interventions are most effective for your learning style and focus your efforts accordingly.")
         st.plotly_chart(resource_usage_chart(learner_df), use_container_width=True, key="resource_usage")
         effects = resource_effect(learner_df)
         st.markdown("**What helped most** (score change after first using each resource)")
@@ -502,7 +480,7 @@ def main() -> None:
     # Prompt Crafting Aids tab
     with tabs[4]:
         st.subheader("Prompt Crafting Aids")
-        st.caption("Find your sweet spot for prompt length and mix up your practice.")
+        st.write("Discover patterns in your prompt construction that correlate with better outcomes. Use these insights to refine your approach and optimize practice timing.")
         st.plotly_chart(prompt_length_scatter(learner_df), use_container_width=True, key="prompt_length")
         st.plotly_chart(practice_variety_chart(learner_df), use_container_width=True, key="practice_variety")
         st.plotly_chart(best_time_chart(learner_df), use_container_width=True, key="best_time")
@@ -510,7 +488,7 @@ def main() -> None:
     # Recent Sessions tab
     with tabs[5]:
         st.subheader("Recent Sessions")
-        st.caption("A quick log of your latest prompts to reflect on what changed.")
+        st.write("Review your latest practice sessions to reflect on what changed and identify patterns in your recent work. Use this log to inform your next learning focus.")
         st.dataframe(recent_sessions(learner_df))
 
 
