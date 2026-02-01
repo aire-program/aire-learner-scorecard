@@ -18,7 +18,6 @@ env/
 
 # Screenshot artifacts and Playwright downloads
 docs/screesnhots/*.png
-docs/screenshots/*.png
 ms-playwright/
 playwright/.cache/
 .cache/ms-playwright/
