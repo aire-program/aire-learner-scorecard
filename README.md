@@ -1,5 +1,7 @@
 # AIRE Learner Scorecard  
 
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://aire-learner-scorecard.streamlit.app/)
+
 The AIRE Learner Scorecard is part of the Personalization Layer of the Applied AI Innovation and Research Enablement (AIRE) Program. It provides learner-facing analytics that summarize how individuals are using AI prompting within the AIRE Researcher Sandbox and how their skills change over time. The public version in this repository mirrors the structure and logic of the internal MSU deployment while relying entirely on synthetic data.
 
 The Scorecard helps learners move beyond one-off AI interactions toward more intentional and reflective practice. By presenting simple, interpretable views of prompt-quality indicators and patterns, it supports thoughtful use of AI tools in teaching, learning, and research contexts.
