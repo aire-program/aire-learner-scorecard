@@ -389,7 +389,12 @@ def main() -> None:
         return
 
     default_id = learners[0]
-    query_params = st.query_params
+    # Use experimental_get_query_params for older Streamlit versions
+    try:
+        query_params = st.query_params
+    except AttributeError:
+        query_params = st.experimental_get_query_params()
+        query_params = {k: v[0] if isinstance(v, list) else v for k, v in query_params.items()}
     fixed_id = AIRE_FIXED_LEARNER_ID or query_params.get("learner_id", default_id)
 
     if fixed_id not in learners:

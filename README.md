@@ -23,6 +23,26 @@ Within this structure, the AIRE Learner Scorecard serves as the learner-facing a
 
 In the internal MSU deployment, the Scorecard drew on authenticated telemetry generated as learners interacted with the AIRE Micro Tutor and Sandbox notebooks. This public version uses synthetic data that follows the same schema so that the approach can be studied, adapted, or extended without exposing any real learner information.
 
+## Screenshots
+
+### Quick View
+![Quick View](docs/screenshots/01-quick-view.png)
+
+### Performance & Stability
+![Performance & Stability](docs/screenshots/02-performance-stability.png)
+
+### Skill Weakness & Progress
+![Skill Weakness & Progress](docs/screenshots/03-skill-weakness-progress.png)
+
+### Action → Outcome
+![Action → Outcome](docs/screenshots/04-action-outcome.png)
+
+### Prompt Crafting Aids
+![Prompt Crafting Aids](docs/screenshots/05-prompt-crafting-aids.png)
+
+### Recent Sessions
+![Recent Sessions](docs/screenshots/06-recent-sessions.png)
+
 ## Public Version and Data Approach
 
 All data in this repository is synthetic and has been generated specifically to demonstrate the Scorecard’s structure and analytic views. The synthetic dataset is intended to:
