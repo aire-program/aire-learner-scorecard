@@ -389,8 +389,8 @@ def main() -> None:
         return
 
     default_id = learners[0]
-    query_params = st.experimental_get_query_params()
-    fixed_id = AIRE_FIXED_LEARNER_ID or query_params.get("learner_id", [default_id])[0]
+    query_params = st.query_params
+    fixed_id = AIRE_FIXED_LEARNER_ID or query_params.get("learner_id", default_id)
 
     if fixed_id not in learners:
         st.error(f"Learner '{fixed_id}' not found in dataset.")
@@ -441,7 +441,7 @@ def main() -> None:
         overview_col1, overview_col2 = st.columns([2, 1])
         with overview_col1:
             st.markdown("**Score trend** – how your scores have moved. Steady ups mean your new habits are sticking.")
-            st.plotly_chart(score_trend_chart(learner_df), use_container_width=True)
+            st.plotly_chart(score_trend_chart(learner_df), use_container_width=True, key="score_trend")
         with overview_col2:
             st.markdown("**Quick tips** – the most relevant next actions.")
             for rec in get_recommendations(learner_df):
@@ -466,8 +466,8 @@ def main() -> None:
     with tabs[2]:
         st.subheader("Skill Weakness & Progress")
         st.caption("Spot which skills are improving and which still need attention.")
-        st.plotly_chart(weakness_decay_chart(learner_df), use_container_width=True)
-        st.plotly_chart(micro_skill_heatmap(learner_df), use_container_width=True)
+        st.plotly_chart(weakness_decay_chart(learner_df), use_container_width=True, key="weakness_decay")
+        st.plotly_chart(micro_skill_heatmap(learner_df), use_container_width=True, key="micro_skill")
         dips = surprise_dips(learner_df)
         with st.expander("Surprise dips (sessions to review)"):
             if dips.empty:
@@ -479,7 +479,7 @@ def main() -> None:
     with tabs[3]:
         st.subheader("Action → Outcome")
         st.caption("See what happened after you followed tips or used resources.")
-        st.plotly_chart(resource_usage_chart(learner_df), use_container_width=True)
+        st.plotly_chart(resource_usage_chart(learner_df), use_container_width=True, key="resource_usage")
         effects = resource_effect(learner_df)
         st.markdown("**What helped most** (score change after first using each resource)")
         if effects.empty:
@@ -498,9 +498,9 @@ def main() -> None:
     with tabs[4]:
         st.subheader("Prompt Crafting Aids")
         st.caption("Find your sweet spot for prompt length and mix up your practice.")
-        st.plotly_chart(prompt_length_scatter(learner_df), use_container_width=True)
-        st.plotly_chart(practice_variety_chart(learner_df), use_container_width=True)
-        st.plotly_chart(best_time_chart(learner_df), use_container_width=True)
+        st.plotly_chart(prompt_length_scatter(learner_df), use_container_width=True, key="prompt_length")
+        st.plotly_chart(practice_variety_chart(learner_df), use_container_width=True, key="practice_variety")
+        st.plotly_chart(best_time_chart(learner_df), use_container_width=True, key="best_time")
 
     # Recent Sessions tab
     with tabs[5]:
