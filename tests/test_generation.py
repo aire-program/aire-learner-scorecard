@@ -1,17 +1,19 @@
-import pandas as pd
-from scripts.generate_synthetic_telemetry import generate_events
-from src.schema import REQUIRED_COLUMNS
+from __future__ import annotations
 
-def test_generate_events_schema():
+import pandas as pd
+
+from scripts.generate_synthetic_telemetry import generate_events
+from src.schema import ColumnNames, REQUIRED_COLUMNS
+
+
+def test_generate_events_schema() -> None:
     df = generate_events(num_learners=1)
     assert not df.empty
-    # Check all required columns are present
     for col in REQUIRED_COLUMNS:
         assert col in df.columns
 
-def test_generate_events_count():
+
+def test_generate_events_count() -> None:
     df = generate_events(num_learners=2)
-    # Each learner has between 6 and 20 events
-    assert len(df) >= 12
-    assert len(df) <= 40
-    assert df["learner_id"].nunique() == 2
+    assert 12 <= len(df) <= 40
+    assert df[ColumnNames.LEARNER_ID.value].nunique() == 2

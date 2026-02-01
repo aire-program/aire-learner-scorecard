@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Dict
 
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 from src.schema import REQUIRED_COLUMNS, ColumnNames
@@ -15,49 +15,33 @@ DATA_PATH = Path(__file__).parent / "data" / "aire_telemetry_synthetic.csv"
 
 @st.cache_data
 def load_data(path: Path = DATA_PATH) -> pd.DataFrame:
-    """Load and validate telemetry data.
-
-    Args:
-        path: Path to the CSV file.
-
-    Returns:
-        pd.DataFrame: Loaded and validated dataframe.
-    """
+    """Load and validate telemetry data from CSV."""
     if not path.exists():
-        st.error(f"Data file not found at {path}. Please run `python3 scripts/generate_synthetic_telemetry.py`.")
+        st.error(f"Data file not found at {path}. Run `python3 scripts/generate_synthetic_telemetry.py`.")
         st.stop()
 
     try:
         df = pd.read_csv(path)
-    except Exception as e:
+    except (pd.errors.EmptyDataError, pd.errors.ParserError, OSError) as e:
         st.error(f"Failed to load data: {e}")
         st.stop()
 
-    # Validate schema
     missing = [col for col in REQUIRED_COLUMNS if col not in df.columns]
     if missing:
         st.error(f"Data schema mismatch. Missing columns: {', '.join(missing)}")
         st.stop()
 
-    # Parse dates
     try:
         df[ColumnNames.TIMESTAMP_UTC.value] = pd.to_datetime(df[ColumnNames.TIMESTAMP_UTC.value])
-    except Exception as e:
+    except (ValueError, TypeError) as e:
         st.error(f"Failed to parse timestamps: {e}")
         st.stop()
 
     return df
 
 
-def learner_summary(df: pd.DataFrame) -> Dict[str, float]:
-    """Calculate summary metrics for a learner.
-
-    Args:
-        df: Dataframe containing learner events.
-
-    Returns:
-        Dict[str, float]: Summary metrics.
-    """
+def learner_summary(df: pd.DataFrame) -> dict[str, float]:
+    """Calculate summary metrics for a learner."""
     return {
         "events": len(df),
         "resources": df[ColumnNames.RESOURCE_ID.value].nunique(),
@@ -66,82 +50,68 @@ def learner_summary(df: pd.DataFrame) -> Dict[str, float]:
     }
 
 
-def get_recommendations(df: pd.DataFrame) -> List[str]:
-    """Generate recommendations based on primary weaknesses.
-
-    Args:
-        df: Dataframe containing learner events.
-
-    Returns:
-        List[str]: List of recommendation strings.
-    """
+def get_recommendations(df: pd.DataFrame) -> list[str]:
+    """Generate recommendations based on primary weaknesses."""
     if df.empty:
         return ["No data available for recommendations."]
 
-    # Find most frequent weakness
     weakness_counts = df[ColumnNames.PRIMARY_WEAKNESS.value].value_counts()
     if weakness_counts.empty:
         return ["Keep practicing!"]
 
     top_weakness = weakness_counts.idxmax()
-    
-    # Get the recommended resource for this weakness (take the most common mapping in case of variance)
-    rec_resource = df[df[ColumnNames.PRIMARY_WEAKNESS.value] == top_weakness][ColumnNames.RECOMMENDED_RESOURCE_ID.value].mode()
-    rec_id = rec_resource[0] if not rec_resource.empty else "general-review"
+    rec_resource = df.loc[
+        df[ColumnNames.PRIMARY_WEAKNESS.value] == top_weakness,
+        ColumnNames.RECOMMENDED_RESOURCE_ID.value
+    ].mode()
+    rec_id = rec_resource.iloc[0] if not rec_resource.empty else "general-review"
 
     return [
         f"Primary Weakness: **{top_weakness}**",
-        f"Recommended Action: Review **{rec_id}** to improve your skills in this area.",
-        "Tip: Focus on consistent application of rubric criteria."
+        f"Recommended Action: Review **{rec_id}** to improve in this area.",
+        "Tip: Focus on consistent application of rubric criteria.",
     ]
 
 
-def score_trend_chart(df: pd.DataFrame):
-    """Plot evaluation score over time.
-
-    Args:
-        df: Dataframe containing learner events.
-
-    Returns:
-        plotly.graph_objects.Figure: Line chart of scores.
-    """
-    df = df.sort_values(ColumnNames.TIMESTAMP_UTC.value)
+def score_trend_chart(df: pd.DataFrame) -> go.Figure:
+    """Plot evaluation score over time."""
+    sorted_df = df.sort_values(ColumnNames.TIMESTAMP_UTC.value)
     fig = px.line(
-        df,
+        sorted_df,
         x=ColumnNames.TIMESTAMP_UTC.value,
         y=ColumnNames.EVALUATION_SCORE.value,
         markers=True,
         title="Evaluation Score Trend",
-        labels={ColumnNames.EVALUATION_SCORE.value: "Score (1-5)", ColumnNames.TIMESTAMP_UTC.value: "Date"},
-        range_y=[0, 5.5]
+        labels={
+            ColumnNames.EVALUATION_SCORE.value: "Score (1-5)",
+            ColumnNames.TIMESTAMP_UTC.value: "Date",
+        },
+        range_y=[0, 5.5],
     )
-    fig.update_layout(margin=dict(l=0, r=0, t=40, b=0))
+    fig.update_layout(margin={"l": 0, "r": 0, "t": 40, "b": 0})
     return fig
 
 
-def resource_usage_chart(df: pd.DataFrame):
-    """Plot usage by resource ID.
-
-    Args:
-        df: Dataframe containing learner events.
-
-    Returns:
-        plotly.graph_objects.Figure: Bar chart of resource usage.
-    """
-    counts = df[ColumnNames.RESOURCE_ID.value].value_counts().reset_index()
-    counts.columns = [ColumnNames.RESOURCE_ID.value, "events"]
+def resource_usage_chart(df: pd.DataFrame) -> go.Figure:
+    """Plot usage by resource ID."""
+    counts = (
+        df[ColumnNames.RESOURCE_ID.value]
+        .value_counts()
+        .reset_index(name="events")
+        .rename(columns={"index": ColumnNames.RESOURCE_ID.value})
+    )
     fig = px.bar(
-        counts, 
-        x=ColumnNames.RESOURCE_ID.value, 
-        y="events", 
+        counts,
+        x=ColumnNames.RESOURCE_ID.value,
+        y="events",
         title="Resource Engagement",
-        labels={ColumnNames.RESOURCE_ID.value: "Resource ID", "events": "Interactions"}
+        labels={ColumnNames.RESOURCE_ID.value: "Resource ID", "events": "Interactions"},
     )
-    fig.update_layout(margin=dict(l=0, r=0, t=40, b=0))
+    fig.update_layout(margin={"l": 0, "r": 0, "t": 40, "b": 0})
     return fig
 
 
-def main():
+def main() -> None:
     st.set_page_config(page_title="AIRE Learner Scorecard", layout="wide")
     st.title("AIRE Learner Scorecard")
 

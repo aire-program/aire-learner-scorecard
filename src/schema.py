@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 from enum import Enum
-from typing import Dict, List
+
 
 class ColumnNames(str, Enum):
+    """Column names for telemetry data."""
+
     TIMESTAMP_UTC = "timestamp_utc"
     LEARNER_ID = "learner_id"
     RESOURCE_ID = "resource_id"
@@ -14,25 +18,32 @@ class ColumnNames(str, Enum):
     USER_PROMPT_CHARACTER_COUNT = "user_prompt_character_count"
     LEARNER_ROLE = "learner_role"
 
+
 class ResourceIDs(str, Enum):
+    """Available resource identifiers."""
+
     MICRO_TUTOR_01 = "micro-tutor-01"
     MICRO_TUTOR_02 = "micro-tutor-02"
     MICRO_TUTOR_03 = "micro-tutor-03"
     MICRO_TUTOR_04 = "micro-tutor-04"
     MICRO_TUTOR_05 = "micro-tutor-05"
 
+
 class Weakness(str, Enum):
+    """Weakness categories."""
+
     CLARITY = "Clarity"
     CONTEXT = "Context"
     CONSTRAINTS = "Constraints"
 
-WEAKNESS_MAP: Dict[str, str] = {
+
+WEAKNESS_MAP: dict[str, str] = {
     Weakness.CLARITY.value: "tutorial-clarity-basics",
     Weakness.CONTEXT.value: "tutorial-grounding-techniques",
-    Weakness.CONSTRAINTS.value: "tutorial-prompt-constraints"
+    Weakness.CONSTRAINTS.value: "tutorial-prompt-constraints",
 }
 
-REQUIRED_COLUMNS: List[str] = [
+REQUIRED_COLUMNS: list[str] = [
     ColumnNames.TIMESTAMP_UTC.value,
     ColumnNames.LEARNER_ID.value,
     ColumnNames.RESOURCE_ID.value,

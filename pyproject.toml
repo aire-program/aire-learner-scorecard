@@ -1,3 +1,22 @@
+[project]
+name = "aire-learner-scorecard"
+version = "0.1.0"
+description = "Learner-facing analytics dashboard for the AIRE Program"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+dependencies = [
+    "streamlit>=1.28.0",
+    "plotly>=5.18.0",
+    "pandas>=2.0.0",
+    "python-dateutil>=2.8.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+]
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
